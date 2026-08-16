@@ -27,15 +27,24 @@ app.use(express.urlencoded({ extended: true }));
 // Static directory for uploaded artwork and extra files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes API REST
+// Routes API REST (Supports both /api prefix and direct serverless pathing)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/pedidos', orderRoutes);
+app.use('/pedidos', orderRoutes);
+
 app.use('/api/usuarios', userRoutes);
+app.use('/usuarios', userRoutes);
+
 app.use('/api/historico', historyRoutes);
+app.use('/historico', historyRoutes);
+
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'OK',
     app: 'Sistema de Gestão de Produção Okami & Universo',
@@ -56,4 +65,3 @@ initDatabase().then(() => {
 });
 
 export default app;
-

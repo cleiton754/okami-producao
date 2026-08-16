@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Controle de Pedidos</title>
+<style>
+:root{
+  --bg:#f4f6f8;
+  --panel:#ffffff;
+  --text:#1f2937;
+  --muted:#6b7280;
+  --line:#dfe4ea;
+  --primary:#111827;
+  --accent:#8ecdf4;
+  --ready:#dcfce7;
+  --ready-border:#86efac;
+  --danger:#dc2626;
+  --shadow:0 8px 20px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.container{max-width:1500px;margin:0 auto;padding:18px}
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:rgba(244,246,248,.95);backdrop-filter:blur(8px);
+  padding:12px 0 14px;
+}
+.header-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px
+}
+h1{font-size:24px;margin:0}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+  border:0;border-radius:10px;padding:11px 14px;font-weight:700;
+  background:#e5e7eb;color:#111827
+}
+.btn.primary{background:#bfe5fb;color:#17324d}
+.btn.blue{background:var(--accent);color:#17324d}
+.btn.danger{background:#fee2e2;color:#991b1b}
+.stats{
+  display:grid;grid-template-columns:repeat(8,minmax(110px,1fr));gap:10px
+}
+.stat{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px;box-shadow:var(--shadow)
+}
+.stat .n{font-size:22px;font-weight:800}
+.stat .l{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.15}
+.stat{background:#eef8ff;border-color:#cfeeff}
+.toolbar{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:12px;box-shadow:var(--shadow);margin:12px 0 18px;
+}
+.toolbar-grid{
+  display:grid;
+  grid-template-columns:2fr repeat(5,minmax(130px,1fr));
+  gap:10px;
+}
+.toolbar input,.toolbar select,.modal input,.modal select{
+  width:100%;padding:11px 12px;border:1px solid #cfd6df;border-radius:10px;background:#fff
+}
+.section-title{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 0 10px
+}
+.section-title h2{font-size:20px;margin:0}
+.day{
+  margin-bottom:24px
+}
+.day-heading{
+  display:flex;align-items:center;gap:10px;font-weight:900;font-size:15px;
+  margin:0 0 10px;padding:10px 4px 8px;border-bottom:3px solid #cbd5e1;
+  text-transform:uppercase;letter-spacing:.04em
+}
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:12px
+}
+.card{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;
+  transition:.15s ease
+}
+.card.ready{background:var(--ready);border-color:var(--ready-border)}
+.card-head{display:flex;gap:10px;align-items:flex-start}
+.thumb-wrap{display:flex;gap:6px;flex-shrink:0}
+.thumb{
+  width:66px;height:66px;border-radius:9px;object-fit:cover;border:1px solid #d1d5db;background:#f3f4f6
+}
+.card-title{font-weight:900;font-size:16px;line-height:1.2;margin-bottom:4px}
+.meta{font-size:13px;color:#4b5563;line-height:1.45}
+.statuses{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.status-btn{
+  border:1px solid #d1d5db;background:#f9fafb;border-radius:9px;
+  padding:9px 6px;font-size:12px;font-weight:800
+}
+.status-btn.on{background:#bfe5fb;color:#17324d;border-color:#8ecdf4}
+.card-actions{display:flex;gap:8px;margin-top:auto}
+.card-actions button{flex:1;padding:9px;border-radius:9px;border:0;font-weight:800;font-size:12px}
+.archive{background:#cfeeff;color:#245b7a}
+.restore{background:#dcfce7;color:#166534}
+.delete{background:#fee2e2;color:#991b1b}
+.empty{
+  background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:30px;text-align:center;color:var(--muted)
+}
+.tabs{display:flex;gap:8px;margin-top:8px}
+.tab{
+  border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:10px 13px;font-weight:800
+}
+.tab.active{background:#bfe5fb;color:#17324d;border-color:#8ecdf4}
+.hidden{display:none!important}
+
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;
+  align-items:center;justify-content:center;padding:16px;z-index:50
+}
+.modal-backdrop.show{display:flex}
+.modal{
+  width:min(720px,100%);max-height:92vh;overflow:auto;background:#fff;
+  border-radius:16px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.24)
+}
+.modal h3{margin:0 0 14px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}
+.field.full{grid-column:1/-1}
+.choice{display:flex;gap:10px}
+.choice label{
+  flex:1;border:1px solid #d1d5db;border-radius:10px;padding:10px;text-align:center;font-weight:800;cursor:pointer
+}
+.choice input{width:auto;margin-right:5px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.preview-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.preview-row img{width:100px;height:100px;object-fit:cover;border:1px solid #ddd;border-radius:10px}
+.mobile-filters-toggle{display:none;margin-top:8px;width:100%}
+
+@media(max-width:1100px){
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .toolbar-grid{grid-template-columns:repeat(3,1fr)}
+  .toolbar-grid .search{grid-column:1/-1}
+}
+@media(max-width:700px){
+  .container{padding:10px}
+  .header-row{align-items:flex-start}
+  h1{font-size:20px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat{padding:10px}
+  .stat .n{font-size:20px}
+  .mobile-filters-toggle{display:block}
+  .toolbar-grid{
+    display:none;grid-template-columns:1fr 1fr;margin-top:10px
+  }
+  .toolbar-grid.open{display:grid}
+  .toolbar-grid .search{grid-column:1/-1}
+  .cards{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}
+  .statuses{gap:6px}
+  .status-btn{padding:10px 4px}
+  .actions .btn{padding:10px 12px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div class="header-row">
+      <div>
+        <h1>Controle de Pedidos <span style="font-size:12px;background:#dcfce7;color:#166534;padding:4px 7px;border-radius:999px;vertical-align:middle">● ONLINE</span></h1>
+        <div class="tabs">
+          <button class="tab active" id="tabProduction">Produção</button>
+          <button class="tab" id="tabArchived">Finalizados / Arquivados</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="newOrderBtn">+ Novo Pedido</button>
+      </div>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="stat"><div class="n" id="sBloq">0</div><div class="l">Bloquinhos</div></div>
+      <div class="stat"><div class="n" id="sCad">0</div><div class="l">Cadernetas</div></div>
+      <div class="stat"><div class="n" id="sOrders">0</div><div class="l">Total de pedidos</div></div>
+      <div class="stat"><div class="n" id="sBloqUnits">0</div><div class="l">Unidades de bloquinhos</div></div>
+      <div class="stat"><div class="n" id="sCadUnits">0</div><div class="l">Unidades de cadernetas</div></div>
+      <div class="stat"><div class="n" id="sPrinted">0</div><div class="l">Impressos</div></div>
+      <div class="stat"><div class="n" id="sCut">0</div><div class="l">Cortados</div></div>
+      <div class="stat"><div class="n" id="sReady">0</div><div class="l">Prontos / Finalizados</div></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn mobile-filters-toggle" id="filterToggle">🔎 Pesquisa e filtros</button>
+
+    <div class="toolbar-grid open" id="productionFilters">
+      <input class="search" id="searchInput" placeholder="Pesquisar por título..." />
+      <select id="filterStore">
+        <option value="">Todas as lojas</option>
+        <option>Shopee Okami</option>
+        <option>Shopee Universo</option>
+        <option>Mercado Livre Okami</option>
+        <option>Mercado Livre Universo</option>
+      </select>
+      <select id="filterProduct">
+        <option value="">Todos os produtos</option>
+        <option>Bloquinho</option>
+        <option>Caderneta</option>
+      </select>
+      <input type="date" id="filterDate" />
+      <select id="filterPrinted">
+        <option value="">Impressão: todos</option>
+        <option value="true">Impresso</option>
+        <option value="false">Não impresso</option>
+      </select>
+      <select id="filterCut">
+        <option value="">Corte: todos</option>
+        <option value="true">Cortado</option>
+        <option value="false">Não cortado</option>
+      </select>
+      <select id="filterReady">
+        <option value="">Pronto: todos</option>
+        <option value="true">Pronto</option>
+        <option value="false">Não pronto</option>
+      </select>
+    </div>
+
+    <div class="toolbar-grid hidden" id="archiveFilters">
+      <input class="search" id="archSearch" placeholder="Pesquisar por título..." />
+      <select id="archStore">
+        <option value="">Todas as lojas</option>
+        <option>Shopee Okami</option>
+        <option>Shopee Universo</option>
+        <option>Mercado Livre Okami</option>
+        <option>Mercado Livre Universo</option>
+      </select>
+      <select id="archProduct">
+        <option value="">Todos os produtos</option>
+        <option>Bloquinho</option>
+        <option>Caderneta</option>
+      </select>
+      <input type="date" id="archDate" />
+    </div>
+  </div>
+
+  <main id="ordersArea"></main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h3 id="modalTitle">Novo Pedido</h3>
+    <form id="orderForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Título do pedido</label>
+          <input id="title" required placeholder="Ex.: Pedido Ana - 20 bloquinhos" />
+        </div>
+
+        <div class="field">
+          <label>Produto</label>
+          <select id="product" required>
+            <option value="Bloquinho">Bloquinho</option>
+            <option value="Caderneta">Caderneta</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Loja</label>
+          <select id="store" required>
+            <option>Shopee Okami</option>
+            <option>Shopee Universo</option>
+            <option>Mercado Livre Okami</option>
+            <option>Mercado Livre Universo</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Quantidade</label>
+          <input type="number" id="quantity" min="1" value="1" required />
+        </div>
+
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="date" required />
+        </div>
+
+        <div class="field">
+          <label>Tipo de espiral</label>
+          <select id="spiral" required>
+            <option>Preto</option>
+            <option>Transparente</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Frente e verso?</label>
+          <select id="frontBack">
+            <option value="false">Não</option>
+            <option value="true">Sim</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label>Imagem da frente</label>
+          <input type="file" id="frontImage" accept="image/*" />
+          <div class="preview-row" id="frontPreview"></div>
+        </div>
+
+        <div class="field full hidden" id="backImageField">
+          <label>Imagem do verso</label>
+          <input type="file" id="backImage" accept="image/*" />
+          <div class="preview-row" id="backPreview"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn" id="cancelModal">Cancelar</button>
+        <button type="submit" class="btn blue">Salvar Pedido</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+const SUPABASE_URL = 'https://kyqvavzdvqbyydtupvev.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_yzeUHvtFssLN3WQcIXLMqA_8AfQyTmJ';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let activeView = 'production';
+let editingId = null;
+let existingFrontImage = null;
+let existingBackImage = null;
+
+function dbToApp(o){
+  return {
+    id: String(o.id),
+    title: o.titulo || '',
+    product: o.produto || '',
+    store: o.loja || '',
+    quantity: Number(o.quantidade || 0),
+    date: o.data || '',
+    spiral: o.espiral || '',
+    frontBack: !!o.frente_verso,
+    frontImage: o.imagem_frente || null,
+    backImage: o.imagem_verso || null,
+    printed: !!o.impresso,
+    cut: !!o.cortado,
+    ready: !!o.pronto,
+    archived: !!o.arquivado,
+    createdAt: o.created_at ? new Date(o.created_at).getTime() : Date.now()
+  };
+}
+
+function appToDb(o){
+  return {
+    titulo: o.title,
+    produto: o.product,
+    loja: o.store,
+    quantidade: Number(o.quantity),
+    data: o.date,
+    espiral: o.spiral,
+    frente_verso: !!o.frontBack,
+    imagem_frente: o.frontImage || null,
+    imagem_verso: o.backImage || null,
+    impresso: !!o.printed,
+    cortado: !!o.cut,
+    pronto: !!o.ready,
+    arquivado: !!o.archived
+  };
+}
+
+async function getAllOrders(){
+  const { data, error } = await sb
+    .from('Pedidos')
+    .select('*')
+    .order('data', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if(error) throw new Error('Não foi possível carregar os pedidos: ' + error.message);
+  return (data || []).map(dbToApp);
+}
+
+async function putOrder(order){
+  const payload = appToDb(order);
+
+  if(order.id){
+    const { error } = await sb
+      .from('Pedidos')
+      .update(payload)
+      .eq('id', Number(order.id));
+    if(error) throw new Error('Não foi possível atualizar o pedido: ' + error.message);
+    return order.id;
+  }
+
+  const { data, error } = await sb
+    .from('Pedidos')
+    .insert(payload)
+    .select('id')
+    .single();
+
+  if(error) throw new Error('Não foi possível salvar o pedido: ' + error.message);
+  return String(data.id);
+}
+
+async function deleteOrderDB(id){
+  const { error } = await sb
+    .from('Pedidos')
+    .delete()
+    .eq('id', Number(id));
+
+  if(error) throw new Error('Não foi possível excluir o pedido: ' + error.message);
+}
+
+function safeFileName(name){
+  return name.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9._-]/g,'_');
+}
+
+async function uploadOrderImage(file, side){
+  if(!file) return null;
+
+  const ext = safeFileName((file.name.split('.').pop() || 'jpg').toLowerCase());
+  const fileName = `${Date.now()}-${crypto.randomUUID()}-${side}.${ext}`;
+
+  const { error } = await sb.storage
+    .from('imagens-pedidos')
+    .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+  if(error) throw new Error('Não foi possível enviar a imagem: ' + error.message);
+
+  const { data } = sb.storage.from('imagens-pedidos').getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
+function storagePathFromUrl(url){
+  if(!url) return null;
+  const marker = '/storage/v1/object/public/imagens-pedidos/';
+  const idx = url.indexOf(marker);
+  return idx >= 0 ? decodeURIComponent(url.slice(idx + marker.length)) : null;
+}
+
+async function removeStoredImage(url){
+  const path = storagePathFromUrl(url);
+  if(!path) return;
+  await sb.storage.from('imagens-pedidos').remove([path]);
+}
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    if(!file) return resolve(null);
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+function fmtDate(dateStr){
+  if(!dateStr) return '';
+  const [y,m,d]=dateStr.split('-').map(Number);
+  return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(y,m-1,d));
+}
+function weekday(dateStr){
+  const [y,m,d]=dateStr.split('-').map(Number);
+  return new Intl.DateTimeFormat('pt-BR',{weekday:'long'}).format(new Date(y,m-1,d));
+}
+function escapeHTML(str=''){
+  return String(str).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+}
+function filteredOrders(orders){
+  if(activeView==='production'){
+    const q=document.getElementById('searchInput').value.toLowerCase().trim();
+    const store=document.getElementById('filterStore').value;
+    const product=document.getElementById('filterProduct').value;
+    const date=document.getElementById('filterDate').value;
+    const printed=document.getElementById('filterPrinted').value;
+    const cut=document.getElementById('filterCut').value;
+    const ready=document.getElementById('filterReady').value;
+    return orders.filter(o=>!o.archived)
+      .filter(o=>!q || o.title.toLowerCase().includes(q))
+      .filter(o=>!store || o.store===store)
+      .filter(o=>!product || o.product===product)
+      .filter(o=>!date || o.date===date)
+      .filter(o=>printed==='' || String(o.printed)===printed)
+      .filter(o=>cut==='' || String(o.cut)===cut)
+      .filter(o=>ready==='' || String(o.ready)===ready);
+  } else {
+    const q=document.getElementById('archSearch').value.toLowerCase().trim();
+    const store=document.getElementById('archStore').value;
+    const product=document.getElementById('archProduct').value;
+    const date=document.getElementById('archDate').value;
+    return orders.filter(o=>o.archived)
+      .filter(o=>!q || o.title.toLowerCase().includes(q))
+      .filter(o=>!store || o.store===store)
+      .filter(o=>!product || o.product===product)
+      .filter(o=>!date || o.date===date);
+  }
+}
+function updateStats(orders){
+  // Pedidos ativos em produção: não arquivados e ainda não marcados como Pronto.
+  const active=orders.filter(o=>!o.archived && !o.ready);
+  const production=orders.filter(o=>!o.archived);
+  const bloq=active.filter(o=>o.product==='Bloquinho');
+  const cad=active.filter(o=>o.product==='Caderneta');
+
+  document.getElementById('sBloq').textContent=bloq.length;
+  document.getElementById('sCad').textContent=cad.length;
+  document.getElementById('sOrders').textContent=active.length;
+  document.getElementById('sBloqUnits').textContent=bloq.reduce((a,o)=>a+Number(o.quantity||0),0);
+  document.getElementById('sCadUnits').textContent=cad.reduce((a,o)=>a+Number(o.quantity||0),0);
+  document.getElementById('sPrinted').textContent=active.filter(o=>o.printed).length;
+  document.getElementById('sCut').textContent=active.filter(o=>o.cut).length;
+
+  // Mantém visível quantos pedidos já foram concluídos, mas ainda não arquivados.
+  document.getElementById('sReady').textContent=production.filter(o=>o.ready).length;
+}
+function cardHTML(o){
+  const imgs = `
+    <div class="thumb-wrap">
+      ${o.frontImage ? `<img class="thumb" src="${o.frontImage}" alt="Frente">` : `<div class="thumb"></div>`}
+      ${o.backImage ? `<img class="thumb" src="${o.backImage}" alt="Verso">` : ''}
+    </div>`;
+  return `
+  <article class="card ${o.ready ? 'ready':''}">
+    <div class="card-head">
+      ${imgs}
+      <div>
+        <div class="card-title">${escapeHTML(o.title)}</div>
+        <div class="meta">
+          <b>${escapeHTML(o.product)}</b> · ${escapeHTML(o.store)}<br>
+          Qtd: <b>${o.quantity}</b> · Espiral: ${escapeHTML(o.spiral)}<br>
+          Data: ${fmtDate(o.date)}
+          ${o.frontBack ? '<br>Frente e verso: Sim' : ''}
+        </div>
+      </div>
+    </div>
+    ${activeView==='production' ? `
+      <div class="statuses">
+        <button class="status-btn ${o.printed?'on':''}" onclick="toggleStatus('${o.id}','printed')">Impresso ${o.printed?'✓':''}</button>
+        <button class="status-btn ${o.cut?'on':''}" onclick="toggleStatus('${o.id}','cut')">Cortado ${o.cut?'✓':''}</button>
+        <button class="status-btn ${o.ready?'on':''}" onclick="toggleStatus('${o.id}','ready')">Pronto ${o.ready?'✓':''}</button>
+      </div>
+      <div class="card-actions">
+        <button class="archive" onclick="archiveOrder('${o.id}')">Arquivar</button>
+        <button class="btn" onclick="editOrder('${o.id}')">Editar</button>
+        <button class="delete" onclick="removeOrder('${o.id}')">Excluir</button>
+      </div>
+    ` : `
+      <div class="card-actions">
+        <button class="restore" onclick="restoreOrder('${o.id}')">Restaurar</button>
+        <button class="delete" onclick="removeOrder('${o.id}')">Excluir</button>
+      </div>
+    `}
+  </article>`;
+}
+async function render(){
+  pendingDeleteId = null;
+  const all=await getAllOrders();
+  updateStats(all);
+  const list=filteredOrders(all).sort((a,b)=>a.date.localeCompare(b.date) || a.createdAt-b.createdAt);
+  const area=document.getElementById('ordersArea');
+
+  if(!list.length){
+    area.innerHTML=`<div class="empty">${activeView==='production'?'Nenhum pedido encontrado na produção.':'Nenhum pedido arquivado encontrado.'}</div>`;
+    return;
+  }
+
+  const groups={};
+  for(const o of list){
+    if(!groups[o.date]) groups[o.date]=[];
+    groups[o.date].push(o);
+  }
+
+  area.innerHTML=Object.entries(groups).map(([date,items])=>{
+    const [y,m,d]=date.split('-').map(Number);
+    const dayName=weekday(date);
+    return `<section class="day">
+      <div class="day-heading">${dayName} — ${d}</div>
+      <div class="cards">${items.map(cardHTML).join('')}</div>
+    </section>`;
+  }).join('');
+}
+async function toggleStatus(id,key){
+  try{
+    const all=await getAllOrders();
+    const o=all.find(x=>x.id===id); if(!o) return;
+    o[key]=!o[key];
+    await putOrder(o);
+    await render();
+  }catch(err){ alert(err.message); }
+}
+async function archiveOrder(id){
+  try{
+    const all=await getAllOrders();
+    const o=all.find(x=>x.id===id); if(!o) return;
+    o.archived=true;
+    await putOrder(o);
+    await render();
+  }catch(err){ alert(err.message); }
+}
+async function restoreOrder(id){
+  try{
+    const all=await getAllOrders();
+    const o=all.find(x=>x.id===id); if(!o) return;
+    o.archived=false;
+    await putOrder(o);
+    await render();
+  }catch(err){ alert(err.message); }
+}
+let pendingDeleteId = null;
+
+async function removeOrder(id){
+  if(pendingDeleteId !== id){
+    pendingDeleteId = id;
+    document.querySelectorAll('.delete').forEach(btn=>{
+      btn.textContent='Excluir';
+      btn.dataset.confirming='false';
+    });
+
+    const buttons=[...document.querySelectorAll('.delete')];
+    const target=buttons.find(btn=>{
+      const attr=btn.getAttribute('onclick') || '';
+      return attr.includes(`removeOrder('${id}')`);
+    });
+
+    if(target){
+      target.textContent='Confirmar exclusão';
+      target.dataset.confirming='true';
+      target.style.fontWeight='900';
+    }
+    return;
+  }
+
+  try{
+    const all=await getAllOrders();
+    const o=all.find(x=>x.id===id);
+    if(o){
+      await removeStoredImage(o.frontImage);
+      await removeStoredImage(o.backImage);
+    }
+    await deleteOrderDB(id);
+    pendingDeleteId = null;
+    await render();
+  }catch(err){
+    alert(err.message);
+  }
+}
+function openModal(){
+  editingId=null;
+  existingFrontImage=null;
+  existingBackImage=null;
+  document.getElementById('modalTitle').textContent='Novo Pedido';
+  document.getElementById('orderForm').reset();
+  document.getElementById('quantity').value=1;
+  document.getElementById('date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('frontBack').value='false';
+  document.getElementById('backImageField').classList.add('hidden');
+  document.getElementById('frontPreview').innerHTML='';
+  document.getElementById('backPreview').innerHTML='';
+  document.getElementById('modalBackdrop').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modalBackdrop').classList.remove('show');
+}
+async function editOrder(id){
+  const all=await getAllOrders();
+  const o=all.find(x=>x.id===id); if(!o) return;
+  editingId=id;
+  existingFrontImage=o.frontImage||null;
+  existingBackImage=o.backImage||null;
+  document.getElementById('modalTitle').textContent='Editar Pedido';
+  document.getElementById('title').value=o.title;
+  document.getElementById('product').value=o.product;
+  document.getElementById('store').value=o.store;
+  document.getElementById('quantity').value=o.quantity;
+  document.getElementById('date').value=o.date;
+  document.getElementById('spiral').value=o.spiral;
+  document.getElementById('frontBack').value=String(!!o.frontBack);
+  document.getElementById('backImageField').classList.toggle('hidden',!o.frontBack);
+  document.getElementById('frontPreview').innerHTML=o.frontImage?`<img src="${o.frontImage}">`:'';
+  document.getElementById('backPreview').innerHTML=o.backImage?`<img src="${o.backImage}">`:'';
+  document.getElementById('frontImage').value='';
+  document.getElementById('backImage').value='';
+  document.getElementById('modalBackdrop').classList.add('show');
+}
+document.getElementById('orderForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const submitBtn=e.target.querySelector('button[type="submit"]');
+  const originalText=submitBtn.textContent;
+  submitBtn.disabled=true;
+  submitBtn.textContent='Salvando...';
+
+  try{
+    const frontFile=document.getElementById('frontImage').files[0];
+    const backFile=document.getElementById('backImage').files[0];
+    const hasBack=document.getElementById('frontBack').value==='true';
+
+    let base={};
+    if(editingId){
+      const all=await getAllOrders();
+      base=all.find(x=>x.id===editingId)||{};
+    }
+
+    let frontUrl=existingFrontImage;
+    let backUrl=existingBackImage;
+
+    if(frontFile){
+      const old=frontUrl;
+      frontUrl=await uploadOrderImage(frontFile,'frente');
+      if(old && old!==frontUrl) await removeStoredImage(old);
+    }
+
+    if(hasBack && backFile){
+      const old=backUrl;
+      backUrl=await uploadOrderImage(backFile,'verso');
+      if(old && old!==backUrl) await removeStoredImage(old);
+    }
+
+    if(!hasBack && backUrl){
+      await removeStoredImage(backUrl);
+      backUrl=null;
+    }
+
+    const order={
+      ...base,
+      id:editingId || null,
+      title:document.getElementById('title').value.trim(),
+      product:document.getElementById('product').value,
+      store:document.getElementById('store').value,
+      quantity:Number(document.getElementById('quantity').value),
+      date:document.getElementById('date').value,
+      spiral:document.getElementById('spiral').value,
+      frontBack:hasBack,
+      frontImage:frontUrl,
+      backImage:hasBack ? backUrl : null,
+      printed:base.printed||false,
+      cut:base.cut||false,
+      ready:base.ready||false,
+      archived:base.archived||false
+    };
+
+    await putOrder(order);
+    closeModal();
+    await render();
+  }catch(err){
+    console.error(err);
+    alert(err.message || 'Erro ao salvar o pedido.');
+  }finally{
+    submitBtn.disabled=false;
+    submitBtn.textContent=originalText;
+  }
+});
+document.getElementById('frontBack').addEventListener('change',e=>{
+  document.getElementById('backImageField').classList.toggle('hidden',e.target.value!=='true');
+});
+document.getElementById('frontImage').addEventListener('change',async e=>{
+  const f=e.target.files[0];
+  document.getElementById('frontPreview').innerHTML=f?`<img src="${await fileToDataURL(f)}">`:'';
+});
+document.getElementById('backImage').addEventListener('change',async e=>{
+  const f=e.target.files[0];
+  document.getElementById('backPreview').innerHTML=f?`<img src="${await fileToDataURL(f)}">`:'';
+});
+document.getElementById('newOrderBtn').addEventListener('click',openModal);
+document.getElementById('cancelModal').addEventListener('click',closeModal);
+document.getElementById('modalBackdrop').addEventListener('click',e=>{if(e.target.id==='modalBackdrop')closeModal()});
+document.getElementById('filterToggle').addEventListener('click',()=>{
+  const target=activeView==='production'?document.getElementById('productionFilters'):document.getElementById('archiveFilters');
+  target.classList.toggle('open');
+});
+document.getElementById('tabProduction').addEventListener('click',()=>{
+  activeView='production';
+  document.getElementById('tabProduction').classList.add('active');
+  document.getElementById('tabArchived').classList.remove('active');
+  document.getElementById('productionFilters').classList.remove('hidden');
+  document.getElementById('archiveFilters').classList.add('hidden');
+  document.getElementById('newOrderBtn').classList.remove('hidden');
+  render();
+});
+document.getElementById('tabArchived').addEventListener('click',()=>{
+  activeView='archived';
+  document.getElementById('tabArchived').classList.add('active');
+  document.getElementById('tabProduction').classList.remove('active');
+  document.getElementById('archiveFilters').classList.remove('hidden');
+  document.getElementById('productionFilters').classList.add('hidden');
+  document.getElementById('newOrderBtn').classList.add('hidden');
+  render();
+});
+[
+  'searchInput','filterStore','filterProduct','filterDate','filterPrinted','filterCut','filterReady',
+  'archSearch','archStore','archProduct','archDate'
+].forEach(id=>document.getElementById(id).addEventListener('input',render));
+
+render().catch(err=>{
+  console.error(err);
+  document.getElementById('ordersArea').innerHTML =
+    `<div class="empty">Erro ao conectar com o banco online.<br>${escapeHTML(err.message)}</div>`;
+});
+</script>
+</body>
+</html>
